@@ -73,6 +73,44 @@ func (p *Proxy) handleMessage(data []byte) error {
 		return nil
 	}
 
+	// Rate limit check — per-identity token bucket
+	if rl := p.opts.RateLimiter; rl != nil && !rl.Allow(identity) {
+		entry := audit.AuditEntry{
+			ID:        uuid.New().String(),
+			Timestamp: time.Now(),
+			Identity:  identity,
+			Tool:      toolName,
+			Params:    req.Params,
+			Decision:  "block",
+			Duration:  time.Since(start).Milliseconds(),
+			Reason:    "rate limit exceeded",
+		}
+		p.logAudit(entry)
+		fmt.Println(string(NewBlockedResponse(req.ID, "rate limit exceeded")))
+		log.Warn().Str("identity", identity).Str("tool", toolName).Msg("rate limited")
+		return nil
+	}
+
+	// Injection detection — run before policy evaluation
+	if injector := p.opts.InjectDetector; injector != nil {
+		if sr := injector.ScanParams(toolName, req.Params); sr.Injection.Detected {
+			entry := audit.AuditEntry{
+				ID:        uuid.New().String(),
+				Timestamp: time.Now(),
+				Identity:  identity,
+				Tool:      toolName,
+				Params:    req.Params,
+				Decision:  "block",
+				Duration:  time.Since(start).Milliseconds(),
+				Reason:    sr.Injection.Reason,
+			}
+			p.logAudit(entry)
+			fmt.Println(string(NewBlockedResponse(req.ID, "injection detected: "+sr.Injection.Reason)))
+			log.Warn().Str("tool", toolName).Str("reason", sr.Injection.Reason).Msg("injection blocked")
+			return nil
+		}
+	}
+
 	// Evaluate policy using the extracted tool name (for tools/call, this is the actual tool name)
 	decision := p.opts.Policy.Evaluate(identity, toolName)
 

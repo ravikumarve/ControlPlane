@@ -62,3 +62,19 @@
   - Uptime tracking
   - Tails the audit JSONL file directly (zero extra infra)
 - **Next Turn Directive**: Tag a release v0.1.0-alpha, or build integration test against real MCP server
+
+### [2026-07-17 23:47] — Integration Test + TUI Shipped to GitHub
+- **State**: Success — Full end-to-end integration test + TUI dashboard
+- **New Files**: `internal/testmcp/server.go` (test MCP server with 4 tools), `internal/testmcp/integration_test.go`
+- **Integration Test Validates**:
+  - Server initialization handshake
+  - `tools/list` discovery allowed through proxy
+  - `read_db` → ALLOW (matches allow-reads policy)
+  - `delete_db` → BLOCK (matches block-deletes policy, code -32000)
+  - `echo` → ALLOW (matches allow-reads policy)
+  - `execute_payout` → HITL (blocked with approval message)
+  - `unknown_tool` → BLOCK (default deny)
+  - Audit log writes 5 entries with intact HMAC chain
+- **Arch Fix**: Added `ExtractToolName()` to proxy — now properly extracts tool name from `tools/call` params for correct RBAC enforcement
+- **Git**: Pushed to main — 13 files changed, 977 insertions
+- **Next Turn Directive**: Tag v0.1.0-alpha release, or build demo/quickstart guide

@@ -6,21 +6,26 @@ import (
 	"sync"
 
 	"github.com/rs/zerolog/log"
+
 	"github.com/matrix/mcp-guard/internal/audit"
 	"github.com/matrix/mcp-guard/internal/hitl"
+	"github.com/matrix/mcp-guard/internal/inject"
 	"github.com/matrix/mcp-guard/internal/policy"
+	"github.com/matrix/mcp-guard/internal/ratelimit"
 	"github.com/matrix/mcp-guard/internal/schema"
 )
 
 // Options configures the MCP Guard proxy.
 type Options struct {
-	Mode         string           // stdio | tcp | both
-	Listen       string           // TCP listen address
-	Upstream     string           // TCP upstream target
-	Policy       *policy.Engine
-	Audit        *audit.Logger
-	SchemaPinner *schema.Pinner
-	HITL         *hitl.Handler
+	Mode           string                // stdio | tcp | both
+	Listen         string                // TCP listen address
+	Upstream       string                // TCP upstream target
+	Policy         *policy.Engine
+	Audit          *audit.Logger
+	SchemaPinner   *schema.Pinner
+	HITL           *hitl.Handler
+	InjectDetector *inject.Detector     // nil = skip injection scan
+	RateLimiter    *ratelimit.KeyedLimiter // nil = no rate limit
 }
 
 // Proxy is the main MCP Guard proxy instance.

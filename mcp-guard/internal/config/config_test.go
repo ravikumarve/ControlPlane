@@ -61,7 +61,6 @@ audit:
 		t.Fatalf("Load failed: %v", err)
 	}
 
-	// Version comes from config
 	if cfg.Version != "1" {
 		t.Errorf("Version = %q; want 1", cfg.Version)
 	}
@@ -170,4 +169,222 @@ func TestLoad_MinimalConfig(t *testing.T) {
 	if cfg.SchemaPinning.Store != ".mcp-guard/pins.json" {
 		t.Errorf("Default SchemaPinning.Store = %q; want .mcp-guard/pins.json", cfg.SchemaPinning.Store)
 	}
+}
+
+// --- Validate tests ---
+
+func TestValidate_Valid(t *testing.T) {
+	cfg := &Config{
+		Version: "1",
+		Proxy: ProxyConfig{
+			Mode:     "tcp",
+			Listen:   ":8443",
+			Upstream: "localhost:3000",
+		},
+		Policies: []PolicyCfg{
+			{Name: "allow-all", Action: "allow", Match: PolicyMatch{Identity: "*"}},
+		},
+		Audit: AuditConfig{
+			Path:    "/tmp/audit.jsonl",
+			HMACKey: "secret-123",
+		},
+	}
+	errs := cfg.Validate()
+	if len(errs) != 0 {
+		t.Errorf("expected no errors, got %d: %v", len(errs), errs)
+	}
+}
+
+func TestValidate_InvalidMode(t *testing.T) {
+	cfg := &Config{
+		Proxy: ProxyConfig{Mode: "http"},
+	}
+	errs := cfg.Validate()
+	if len(errs) == 0 {
+		t.Fatal("expected errors for invalid mode")
+	}
+	found := false
+	for _, e := range errs {
+		if contains(e.Error(), "unsupported proxy mode") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected 'unsupported proxy mode' error, got: %v", errs)
+	}
+}
+
+func TestValidate_TCPMissingFields(t *testing.T) {
+	cfg := &Config{
+		Proxy: ProxyConfig{Mode: "tcp"},
+		Audit: AuditConfig{HMACKey: "key"},
+	}
+	errs := cfg.Validate()
+	if len(errs) == 0 {
+		t.Fatal("expected errors for tcp missing listen/upstream")
+	}
+}
+
+func TestValidate_DuplicatePolicyName(t *testing.T) {
+	cfg := &Config{
+		Proxy: ProxyConfig{Mode: "stdio"},
+		Policies: []PolicyCfg{
+			{Name: "dup", Action: "allow", Match: PolicyMatch{Identity: "*"}},
+			{Name: "dup", Action: "block", Match: PolicyMatch{Tools: []string{"x"}}},
+		},
+		Audit: AuditConfig{HMACKey: "key"},
+	}
+	errs := cfg.Validate()
+	found := false
+	for _, e := range errs {
+		if contains(e.Error(), "duplicate policy name") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected duplicate policy name error, got: %v", errs)
+	}
+}
+
+func TestValidate_InvalidAction(t *testing.T) {
+	cfg := &Config{
+		Proxy: ProxyConfig{Mode: "stdio"},
+		Policies: []PolicyCfg{
+			{Name: "bad", Action: "delete", Match: PolicyMatch{Identity: "*"}},
+		},
+		Audit: AuditConfig{HMACKey: "key"},
+	}
+	errs := cfg.Validate()
+	found := false
+	for _, e := range errs {
+		if contains(e.Error(), "action") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected action error, got: %v", errs)
+	}
+}
+
+func TestValidate_InvalidRateLimit(t *testing.T) {
+	cfg := &Config{
+		Proxy: ProxyConfig{Mode: "stdio"},
+		Policies: []PolicyCfg{
+			{Name: "rl", Action: "allow", Match: PolicyMatch{Identity: "*"}, RateLimit: "xyz"},
+		},
+		Audit: AuditConfig{HMACKey: "key"},
+	}
+	errs := cfg.Validate()
+	found := false
+	for _, e := range errs {
+		if contains(e.Error(), "rate_limit") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected rate_limit error, got: %v", errs)
+	}
+}
+
+func TestValidate_NoMatch(t *testing.T) {
+	cfg := &Config{
+		Proxy: ProxyConfig{Mode: "stdio"},
+		Policies: []PolicyCfg{
+			{Name: "empty", Action: "allow"},
+		},
+		Audit: AuditConfig{HMACKey: "key"},
+	}
+	errs := cfg.Validate()
+	found := false
+	for _, e := range errs {
+		if contains(e.Error(), "no match criteria") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected 'no match criteria' error, got: %v", errs)
+	}
+}
+
+func TestValidate_EmptyHMACKey(t *testing.T) {
+	cfg := &Config{
+		Proxy: ProxyConfig{Mode: "stdio"},
+		Policies: []PolicyCfg{
+			{Name: "p", Action: "allow", Match: PolicyMatch{Identity: "*"}},
+		},
+		Audit: AuditConfig{Path: "/tmp/audit.jsonl"},
+	}
+	errs := cfg.Validate()
+	found := false
+	for _, e := range errs {
+		if contains(e.Error(), "hmac_key is empty") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected hmac_key warning, got: %v", errs)
+	}
+}
+
+func TestValidate_BadHITLWebhook(t *testing.T) {
+	cfg := &Config{
+		Proxy: ProxyConfig{Mode: "stdio"},
+		Policies: []PolicyCfg{
+			{Name: "p", Action: "allow", Match: PolicyMatch{Identity: "*"}},
+		},
+		Audit: AuditConfig{HMACKey: "key"},
+		HITL:  &HITLConfig{WebhookURL: "not-a-url"},
+	}
+	errs := cfg.Validate()
+	found := false
+	for _, e := range errs {
+		if contains(e.Error(), "webhook_url") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected webhook_url error, got: %v", errs)
+	}
+}
+
+func TestParseRateSimple(t *testing.T) {
+	tests := []struct {
+		input   string
+		wantErr bool
+	}{
+		{"100/m", false},
+		{"10/s", false},
+		{"1000/h", false},
+		{"", true},
+		{"abc", true},
+		{"100/x", true},
+	}
+	for _, tt := range tests {
+		_, _, err := parseRateSimple(tt.input)
+		if tt.wantErr && err == nil {
+			t.Errorf("expected error for %q", tt.input)
+		}
+		if !tt.wantErr && err != nil {
+			t.Errorf("unexpected error for %q: %v", tt.input, err)
+		}
+	}
+}
+
+func contains(s, substr string) bool {
+	if len(s) < len(substr) {
+		return false
+	}
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
 }

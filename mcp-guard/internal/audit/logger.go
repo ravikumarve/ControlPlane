@@ -21,6 +21,7 @@ type AuditEntry struct {
 	Tool      string    `json:"tool"`
 	Params    any       `json:"params"`
 	Decision  string    `json:"decision"` // allow | block | hitl | pending | denied
+	Reason    string    `json:"reason,omitempty"`
 	Duration  int64     `json:"duration_ms,omitempty"`
 	HMAC      string    `json:"hmac"`
 	PrevHMAC  string    `json:"prev_hmac"`
