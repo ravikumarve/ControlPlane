@@ -78,3 +78,21 @@
 - **Arch Fix**: Added `ExtractToolName()` to proxy — now properly extracts tool name from `tools/call` params for correct RBAC enforcement
 - **Git**: Pushed to main — 13 files changed, 977 insertions
 - **Next Turn Directive**: Tag v0.1.0-alpha release, or build demo/quickstart guide
+
+### [2026-07-18 00:12] — Core Hardening: Injection Detection + Rate Limiting + Config Validation
+- **State**: Success — 7 test suites, 15 new files, 1,544 insertions
+- **New Packages**:
+  - `internal/inject/` — injection detection engine (patterns, homoglyphs, depth bomb, length limits)
+  - `internal/ratelimit/` — token bucket rate limiter per identity
+- **Core Changes**:
+  - TCP proxy: `io.Copy` → line scanner for upstream response forwarding + shared context for clean goroutine shutdown
+  - Stdio proxy: added injection + rate limit checks
+  - Config: `Validate()` catches 9+ error types (invalid mode, duplicate names, bad actions, bad rate limits, etc.)
+  - AuditEntry: added `Reason` field for block reason traceability
+- **Injection Detection**: 10 pattern categories (INJ-IGNORE-PREV, INJ-JAILBREAK, INJ-SQL, INJ-COMMAND, etc.), 60+ confusable character map, 20-level max depth, 100KB max payload
+- **Rate Limiting**: Token bucket per identity, parses `100/m`, `10/s`, `1000/h` formats
+- **Config Validation**: Proxy mode, policy actions, TCP fields, duplicate names, rate limit format, HITL webhook URLs, HMAC key warnings
+- **Test Count**: ~58 tests across 7 packages (audit, config, inject, policy, proxy, ratelimit, testmcp)
+- **Build**: 8.5MB binary, `go vet` clean
+- **Git**: `5d3ef5b` pushed to main
+- **Next Turn Directive**: Tag v0.1.0-alpha release, or build deploy/docs/quickstart guide
