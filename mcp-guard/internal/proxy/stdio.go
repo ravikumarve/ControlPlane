@@ -60,6 +60,7 @@ func (p *Proxy) handleMessage(data []byte) error {
 
 	start := time.Now()
 	identity := detectIdentity(req)
+	toolName := ExtractToolName(req)
 
 	// Special handling for tools/list (needed for schema pinning)
 	if req.Method == "tools/list" {
@@ -72,14 +73,14 @@ func (p *Proxy) handleMessage(data []byte) error {
 		return nil
 	}
 
-	// Evaluate policy
-	decision := p.opts.Policy.Evaluate(identity, req.Method)
+	// Evaluate policy using the extracted tool name (for tools/call, this is the actual tool name)
+	decision := p.opts.Policy.Evaluate(identity, toolName)
 
 	entry := audit.AuditEntry{
 		ID:        uuid.New().String(),
 		Timestamp: time.Now(),
 		Identity:  identity,
-		Tool:      req.Method,
+		Tool:      toolName,
 		Params:    req.Params,
 		Duration:  time.Since(start).Milliseconds(),
 	}
@@ -92,7 +93,7 @@ func (p *Proxy) handleMessage(data []byte) error {
 		fmt.Println(string(blocked))
 		log.Warn().
 			Str("identity", identity).
-			Str("tool", req.Method).
+			Str("tool", toolName).
 			Str("reason", decision.Reason).
 			Msg("blocked tool call")
 
@@ -103,7 +104,7 @@ func (p *Proxy) handleMessage(data []byte) error {
 			p.opts.HITL.Submit(hitl.Request{
 				ID:        entry.ID,
 				Identity:  identity,
-				Tool:      req.Method,
+				Tool:      toolName,
 				Params:    req.Params,
 				RawData:   string(data),
 				RiskScore: decision.RiskScore,
@@ -113,7 +114,7 @@ func (p *Proxy) handleMessage(data []byte) error {
 			log.Info().
 				Str("id", entry.ID).
 				Str("identity", identity).
-				Str("tool", req.Method).
+				Str("tool", toolName).
 				Msg("sent for human approval")
 		} else {
 			// HITL not configured, block by default
@@ -126,7 +127,7 @@ func (p *Proxy) handleMessage(data []byte) error {
 	case policy.ActionAllow:
 		// Schema pinning: update hashes if enabled
 		if p.opts.SchemaPinner != nil {
-			go p.opts.SchemaPinner.CheckAndPin(req.Method, data)
+			go p.opts.SchemaPinner.CheckAndPin(toolName, data)
 		}
 
 		entry.Decision = "allow"
@@ -136,7 +137,7 @@ func (p *Proxy) handleMessage(data []byte) error {
 		fmt.Println(string(data))
 		log.Debug().
 			Str("identity", identity).
-			Str("tool", req.Method).
+			Str("tool", toolName).
 			Msg("allowed tool call")
 	}
 

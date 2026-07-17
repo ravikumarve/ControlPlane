@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"fmt"
+	"net"
 	"sync"
 
 	"github.com/rs/zerolog/log"
@@ -24,9 +25,10 @@ type Options struct {
 
 // Proxy is the main MCP Guard proxy instance.
 type Proxy struct {
-	opts    Options
-	mu      sync.Mutex
-	stopped bool
+	opts     Options
+	mu       sync.Mutex
+	stopped  bool
+	listener net.Listener
 }
 
 // New creates a new MCP Guard proxy.
@@ -53,7 +55,10 @@ func (p *Proxy) Stop() {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.stopped = true
-	log.Info().Msg("proxy stop signal sent")
+	if p.listener != nil {
+		p.listener.Close()
+	}
+	log.Info().Msg("proxy stopped")
 }
 
 // isStopped checks if a stop has been requested.

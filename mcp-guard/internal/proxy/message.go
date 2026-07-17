@@ -71,6 +71,21 @@ func NewBlockedResponse(id any, reason string) []byte {
 	return data
 }
 
+// ExtractToolName extracts the actual tool name from a tools/call request.
+// For MCP, the method is "tools/call" and the tool name is in params.name.
+// Returns the JSON-RPC method for non-tool calls.
+func ExtractToolName(req *JSONRPCRequest) string {
+	if req.Method == "tools/call" && req.Params != nil {
+		if params, ok := req.Params.(map[string]any); ok {
+			if name, ok := params["name"].(string); ok {
+				return name
+			}
+		}
+		return "tools/call"
+	}
+	return req.Method
+}
+
 // NewErrorResponse creates a generic JSON-RPC error response.
 func NewErrorResponse(id any, code int, message string) []byte {
 	resp := JSONRPCResponse{

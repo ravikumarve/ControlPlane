@@ -152,6 +152,19 @@ func splitLines(data []byte) [][]byte {
 	return lines
 }
 
+// ParseEntry parses a single JSONL line into an AuditEntry.
+func ParseEntry(data []byte) AuditEntry {
+	var entry AuditEntry
+	if err := json.Unmarshal(data, &entry); err == nil {
+		return entry
+	}
+	return AuditEntry{
+		Timestamp: time.Now(),
+		Decision:  "parse_error",
+		Tool:      string(data),
+	}
+}
+
 func dirFromPath(path string) string {
 	for i := len(path) - 1; i >= 0; i-- {
 		if path[i] == '/' {

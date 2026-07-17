@@ -43,3 +43,22 @@
   - `internal/proxy/message_test.go` — 13 tests (parse request/response, errors, blocked response, identity detection)
 - **Verification**: `go vet` clean, `go build` clean, binary 7.1MB
 - **Next Turn Directive**: GitHub publish (create repo, push), or implement TUI dashboard with Bubble Tea
+
+### [2026-07-17 22:30] — GitHub Published
+- **State**: Success — Pushed to https://github.com/ravikumarve/ControlPlane
+- **Actions**: Initialized git, created .gitignore/LICENSE/README.md, committed 35 files (3,659 lines), pushed to main
+- **Repo Structure**: ControlPlane AI/ (docs root) + mcp-guard/ (Go module)
+- **Next Turn Directive**: Tag a release, or implement TUI dashboard with Bubble Tea, or build integration test against real MCP server
+
+### [2026-07-17 22:35] — TUI Dashboard Added
+- **State**: Success — `mcp-guard top` with live Bubble Tea dashboard, compiles and runs
+- **New Files**: `internal/tui/model.go`, `internal/tui/styles.go`, `cmd/top.go`
+- **Dependencies Added**: `github.com/charmbracelet/bubbletea`, `github.com/charmbracelet/lipgloss`, `github.com/charmbracelet/bubbles`
+- **Binary Size**: 8.5MB (from 7.1MB — lipgloss/bubbletea overhead)
+- **Dashboard Features**:
+  - Live counter: total/allowed/blocked/HITL pending
+  - Real-time log feed (last 15 entries, colored by decision)
+  - Pause/resume (p key)
+  - Uptime tracking
+  - Tails the audit JSONL file directly (zero extra infra)
+- **Next Turn Directive**: Tag a release v0.1.0-alpha, or build integration test against real MCP server

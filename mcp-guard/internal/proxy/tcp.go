@@ -25,17 +25,19 @@ func (p *Proxy) startTCP() error {
 	if err != nil {
 		return fmt.Errorf("failed to listen on %s: %w", p.opts.Listen, err)
 	}
+	p.mu.Lock()
+	p.listener = listener
+	p.mu.Unlock()
 	defer listener.Close()
 
 	log.Info().Str("addr", p.opts.Listen).Str("upstream", p.opts.Upstream).Msg("TCP proxy listening")
 
 	for {
-		if p.isStopped() {
-			break
-		}
-
 		client, err := listener.Accept()
 		if err != nil {
+			if p.isStopped() {
+				break
+			}
 			log.Error().Err(err).Msg("accept error")
 			continue
 		}
@@ -87,6 +89,7 @@ func (p *Proxy) forwardClientToUpstream(client, upstream net.Conn) {
 
 		start := time.Now()
 		identity := detectIdentity(req)
+		toolName := ExtractToolName(req)
 
 		// Skip handshake
 		if req.Method == "initialize" || req.Method == "notifications/initialized" {
@@ -94,13 +97,13 @@ func (p *Proxy) forwardClientToUpstream(client, upstream net.Conn) {
 			continue
 		}
 
-		decision := p.opts.Policy.Evaluate(identity, req.Method)
+		decision := p.opts.Policy.Evaluate(identity, toolName)
 
 		entry := audit.AuditEntry{
 			ID:        uuid.New().String(),
 			Timestamp: time.Now(),
 			Identity:  identity,
-			Tool:      req.Method,
+			Tool:      toolName,
 			Params:    req.Params,
 		}
 
@@ -111,7 +114,7 @@ func (p *Proxy) forwardClientToUpstream(client, upstream net.Conn) {
 			p.logAudit(entry)
 			blocked := NewBlockedResponse(req.ID, decision.Reason)
 			fmt.Fprintln(client, string(blocked))
-			log.Warn().Str("tool", req.Method).Str("reason", decision.Reason).Msg("blocked")
+			log.Warn().Str("tool", toolName).Str("reason", decision.Reason).Msg("blocked")
 
 		case policy.ActionHITL:
 			entry.Decision = "pending"
@@ -119,14 +122,14 @@ func (p *Proxy) forwardClientToUpstream(client, upstream net.Conn) {
 				p.opts.HITL.Submit(hitl.Request{
 					ID:       entry.ID,
 					Identity: identity,
-					Tool:     req.Method,
+					Tool:     toolName,
 					Params:   req.Params,
 					RawData:  line,
 				})
 			}
 			blocked := NewBlockedResponse(req.ID, "requires human approval")
 			fmt.Fprintln(client, string(blocked))
-			log.Info().Str("id", entry.ID).Str("tool", req.Method).Msg("sent for approval")
+			log.Info().Str("id", entry.ID).Str("tool", toolName).Msg("sent for approval")
 
 		case policy.ActionAllow:
 			entry.Decision = "allow"
