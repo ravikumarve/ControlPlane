@@ -7,6 +7,39 @@ This repo holds the company foundation — mission, strategy, architecture, and 
 
 ## 💾 Session Memory Ledger
 
+### [2026-07-19 22:45] — Workspace UI Pages (Login, Dashboard, Policies, Audit, Settings)
+- **State**: Success — 5 workspace pages built, all compiled
+- **Files Created**:
+  - `lib/api.ts` — API client with `api.login()`, `api.getStatus()`, `api.listPolicies()`, `api.savePolicies()`, `api.getAudit()`, `api.getConfig()`
+  - `app/(workspace)/layout.tsx` — workspace layout with sidebar nav (◆ Dashboard, ⬡ Policies, ☰ Audit, ⚙ Settings), auth guard, logout
+  - `app/(workspace)/login/page.tsx` — login form with API key input, error handling, default key hint
+  - `app/(workspace)/dashboard/page.tsx` — 6 stat cards grid (total, allowed, blocked, hitl, rate limited, injection blocked), auto-refresh toggle, percentage breakdowns
+  - `app/(workspace)/policies/page.tsx` — policy list with inline editing (name, action, identity, tools), add/remove, save/cancel
+  - `app/(workspace)/audit/page.tsx` — audit log viewer with decision filter (all/allow/block/pending), HMAC chain display
+  - `app/(workspace)/settings/page.tsx` — config viewer (JSON dump), copy to clipboard, quick info cards
+- **Files Modified**: `components/shared/Navbar.tsx` — added orange "Workspace" link to landing page nav
+- **URL Structure**: `/login`, `/dashboard`, `/policies`, `/audit`, `/settings` (flat, clean URLs via route groups)
+- **Auth Flow**: API key → POST /api/login → store token in localStorage → Bearer auth on all subsequent requests → auto-redirect to /login if unauthenticated
+- **Build Status**: Next.js build ✅ (5 new routes, 87.6 kB static export), Go build ✅, Go tests ✅
+- **Next Turn Directive**: Wire up the full stack end-to-end — run `mcp-guard serve` with admin enabled, verify workspace login works against live API, then bundle for Gumroad
+
+### [2026-07-19 22:00] — Admin API + Proxy Stats + Workspace Infrastructure
+- **State**: Success — Admin HTTP server built and wired
+- **Files Created**:
+  - `mcp-guard/internal/proxy/stats.go` — atomic counters (total, allow, block, hitl, rate_limit, injection)
+  - `mcp-guard/internal/admin/server.go` — HTTP server with auth (Bearer API key), CORS, 6 endpoints
+- **Files Modified**:
+  - `mcp-guard/internal/proxy/proxy.go` — added `Stats *Stats` field to Options, `Stats()` accessor
+  - `mcp-guard/internal/proxy/tcp.go` — stats increments at all decision points
+  - `mcp-guard/internal/config/config.go` — added `AdminConfig` (enabled, listen, api_key, origins)
+  - `mcp-guard/internal/policy/types.go` — added `RawPolicy`, `Engine.List()`, `Engine.Replace()`
+  - `mcp-guard/internal/audit/logger.go` — added `Logger.Recent(n)` method
+  - `mcp-guard/cmd/serve.go` — wired admin server start/stop, proxyStats, config closure
+- **Admin API Endpoints**: POST /api/login, GET /api/status, GET /api/policies, POST /api/policies, GET /api/audit, GET /api/config
+- **Config Defaults**: admin.listen = ":9090", admin.api_key = "controlplane-dev-key"
+- **Build Status**: Go build ✅, all 68+ tests pass ✅, Next.js build ✅ (87.5 kB static export)
+- **Next Turn Directive**: Build workspace UI pages (login, dashboard, policies, audit, settings)
+
 ### [2026-07-19 17:30] — Split MCP Guard into Standalone Project
 - **State**: Success — mcp-guard Go implementation moved to its own repo (`ravikumarve/mcp-guard`)
 - **Actions**: Cleaned ControlPlane AI repo of all Go code. Now holds only company docs.

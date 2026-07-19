@@ -28,6 +28,7 @@ type Options struct {
 	InjectDetector  *inject.Detector      // nil = skip injection scan
 	RateLimiter     *ratelimit.KeyedLimiter  // nil = no rate limit
 	AlertDispatcher *alert.Dispatcher     // nil = no alerts
+	Stats          *Stats                // nil = no stats tracking
 }
 
 // Proxy is the main MCP Guard proxy instance.
@@ -36,6 +37,11 @@ type Proxy struct {
 	mu       sync.Mutex
 	stopped  bool
 	listener net.Listener
+}
+
+// Stats returns the proxy's stats tracker.
+func (p *Proxy) Stats() *Stats {
+	return p.opts.Stats
 }
 
 // New creates a new MCP Guard proxy.

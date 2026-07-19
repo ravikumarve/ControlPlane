@@ -2,6 +2,7 @@ package policy
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/ravikumarve/ControlPlane/mcp-guard/internal/config"
 )
@@ -21,8 +22,22 @@ type Decision struct {
 	RiskScore  float64
 }
 
+// RawPolicy is a simplified policy for API serialization.
+type RawPolicy struct {
+	Name   string            `json:"name"`
+	Action string            `json:"action"`
+	Match  RawPolicyMatch    `json:"match"`
+}
+
+type RawPolicyMatch struct {
+	Identity string            `json:"identity"`
+	Tools    []string          `json:"tools"`
+	Params   map[string]any    `json:"params,omitempty"`
+}
+
 // Engine evaluates tool calls against configured policies.
 type Engine struct {
+	mu       sync.RWMutex
 	policies []config.PolicyCfg
 	matcher  *Matcher
 }
@@ -33,6 +48,45 @@ func NewEngine(policies []config.PolicyCfg) *Engine {
 		policies: policies,
 		matcher:  NewMatcher(),
 	}
+}
+
+// List returns all policies as raw configs.
+func (e *Engine) List() []config.PolicyCfg {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	result := make([]config.PolicyCfg, len(e.policies))
+	copy(result, e.policies)
+	return result
+}
+
+// Replace replaces all policies with a new set.
+func (e *Engine) Replace(raw []RawPolicy) error {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	policies := make([]config.PolicyCfg, len(raw))
+	for i, rp := range raw {
+		if rp.Name == "" {
+			return fmt.Errorf("policy %d: name is required", i)
+		}
+		switch rp.Action {
+		case "allow", "block", "hitl":
+		default:
+			return fmt.Errorf("policy %d: invalid action %q", i, rp.Action)
+		}
+		policies[i] = config.PolicyCfg{
+			Name: rp.Name,
+			Action: rp.Action,
+			Match: config.PolicyMatch{
+				Identity: rp.Match.Identity,
+				Tools:    rp.Match.Tools,
+				Params:   rp.Match.Params,
+			},
+		}
+	}
+
+	e.policies = policies
+	return nil
 }
 
 // Evaluate checks a tool call against all policies in order.

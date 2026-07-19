@@ -131,8 +131,15 @@ func (p *Proxy) handleClientRequest(cc *connContext, req *JSONRPCRequest, rawLin
 		return toolName
 	}
 
+	if s := p.opts.Stats; s != nil {
+		s.TotalCalls.Add(1)
+	}
+
 	// Rate limit check — per-identity token bucket
 	if rl := p.opts.RateLimiter; rl != nil && !rl.Allow(identity) {
+		if s := p.opts.Stats; s != nil {
+			s.RateLimited.Add(1)
+		}
 		entry := audit.AuditEntry{
 			ID:        uuid.New().String(),
 			Timestamp: time.Now(),
@@ -159,6 +166,9 @@ func (p *Proxy) handleClientRequest(cc *connContext, req *JSONRPCRequest, rawLin
 	// Injection detection — run before policy evaluation
 	if injector := p.opts.InjectDetector; injector != nil {
 		if sr := injector.ScanParams(toolName, req.Params); sr.Injection.Detected {
+			if s := p.opts.Stats; s != nil {
+				s.InjectionBlock.Add(1)
+			}
 			entry := audit.AuditEntry{
 				ID:        uuid.New().String(),
 				Timestamp: time.Now(),
@@ -199,6 +209,9 @@ func (p *Proxy) handleClientRequest(cc *connContext, req *JSONRPCRequest, rawLin
 	case policy.ActionBlock:
 		entry.Decision = "block"
 		entry.Duration = time.Since(start).Milliseconds()
+		if s := p.opts.Stats; s != nil {
+			s.Blocked.Add(1)
+		}
 		p.logAudit(entry)
 		p.sendAlert(alert.Event{
 			Type:      "block",
@@ -213,6 +226,9 @@ func (p *Proxy) handleClientRequest(cc *connContext, req *JSONRPCRequest, rawLin
 
 	case policy.ActionHITL:
 		entry.Decision = "pending"
+		if s := p.opts.Stats; s != nil {
+			s.HITLPending.Add(1)
+		}
 		if p.opts.HITL != nil {
 			p.opts.HITL.Submit(hitl.Request{
 				ID:       entry.ID,
@@ -229,6 +245,9 @@ func (p *Proxy) handleClientRequest(cc *connContext, req *JSONRPCRequest, rawLin
 	case policy.ActionAllow:
 		entry.Decision = "allow"
 		entry.Duration = time.Since(start).Milliseconds()
+		if s := p.opts.Stats; s != nil {
+			s.Allowed.Add(1)
+		}
 		p.logAudit(entry)
 		fmt.Fprintln(cc.upstream, rawLine)
 	}

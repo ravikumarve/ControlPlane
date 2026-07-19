@@ -3,14 +3,10 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --color-primary: #1A237E;
-    --color-accent: #00BCD4;
-    --color-success: #4CAF50;
-    --color-danger: #F44336;
-    --color-warning: #FFC107;
-    --color-surface-dark: #0D1117;
-    --color-surface-light: #FAFAFA;
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
   }
 
   html {
@@ -18,13 +14,16 @@
   }
 
   body {
-    @apply bg-surface-light text-gray-900 antialiased;
+    background-color: #050505;
+    color: #ffffff;
+    font-family: "Inter", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
   }
 
-  @media (prefers-color-scheme: dark) {
-    body {
-      @apply bg-surface-dark text-gray-100;
-    }
+  ::selection {
+    background: rgba(6, 182, 212, 0.3);
+    color: #ffffff;
   }
 }
 
@@ -34,6 +33,18 @@
   }
 
   .section-padding {
-    @apply py-section lg:py-section-lg;
+    @apply py-section;
+  }
+
+  .section-border {
+    @apply border-t border-border-solid;
+  }
+
+  .text-mono {
+    font-family: "JetBrains Mono", monospace;
+  }
+
+  .text-muted {
+    @apply text-gray-400;
   }
 }

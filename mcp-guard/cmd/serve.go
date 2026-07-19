@@ -10,6 +10,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
+	"github.com/ravikumarve/ControlPlane/mcp-guard/internal/admin"
 	"github.com/ravikumarve/ControlPlane/mcp-guard/internal/alert"
 	"github.com/ravikumarve/ControlPlane/mcp-guard/internal/audit"
 	"github.com/ravikumarve/ControlPlane/mcp-guard/internal/config"
@@ -70,6 +71,9 @@ between AI agents and MCP servers based on configured policies.`,
 			log.Info().Str("channel", channel).Str("webhook", cfg.Alert.WebhookURL).Msg("alert dispatcher configured")
 		}
 
+		// Initialize proxy stats
+		proxyStats := &proxy.Stats{}
+
 		// Build proxy
 		p := proxy.New(proxy.Options{
 			Mode:            cfg.Proxy.Mode,
@@ -80,22 +84,43 @@ between AI agents and MCP servers based on configured policies.`,
 			SchemaPinner:    schemaPinner,
 			HITL:            hitlHandler,
 			AlertDispatcher: alertDispatcher,
+			Stats:           proxyStats,
 		})
 
 		// Handle shutdown
 		sigCh := make(chan os.Signal, 1)
 		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 
-		go func() {
-			<-sigCh
-			log.Info().Msg("shutting down...")
-			p.Stop()
-		}()
+		// Start admin server if enabled
+		var adminServer *admin.Server
+		if cfg.Admin.Enabled {
+			adminServer = admin.New(
+				cfg.Admin.APIKey,
+				cfg.Admin.Listen,
+				policyEngine,
+				auditLogger,
+				proxyStats,
+				func() interface{} { return cfg },
+			)
+			go func() {
+				if err := adminServer.Start(); err != nil {
+					log.Error().Err(err).Msg("admin server stopped")
+				}
+			}()
+		}
 
 		// Serve
 		if err := p.Start(); err != nil {
 			return fmt.Errorf("proxy error: %w", err)
 		}
+
+		// Shutdown: stop admin then proxy
+		<-sigCh
+		log.Info().Msg("shutting down...")
+		if adminServer != nil {
+			adminServer.Stop()
+		}
+		p.Stop()
 
 		log.Info().Msg("proxy stopped")
 		return nil

@@ -3,11 +3,11 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "ControlPlane AI — Security infrastructure for the AI agent ecosystem",
-    template: "%s | ControlPlane AI",
+    default: "ControlPlane | Security for the AI Agent Ecosystem",
+    template: "%s | ControlPlane",
   },
   description:
-    "ControlPlane AI builds zero-trust security tools for organizations deploying autonomous AI agents. MCP Security Gateway, RBAC, injection detection, and audit.",
+    "ControlPlane builds zero-trust security infrastructure for organizations deploying autonomous AI agents. MCP Security Gateway, RBAC, injection detection, and audit.",
 };
 
 export default function RootLayout({
@@ -17,7 +17,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="min-h-screen">{children}</body>
+      <body>{children}</body>
     </html>
   );
 }

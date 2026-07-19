@@ -166,6 +166,35 @@ func ParseEntry(data []byte) AuditEntry {
 	}
 }
 
+// Recent reads the most recent N entries from the audit log.
+func (l *Logger) Recent(n int) ([]AuditEntry, error) {
+	l.mu.Lock()
+	path := l.file.Name()
+	l.mu.Unlock()
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("read audit: %w", err)
+	}
+
+	lines := splitLines(data)
+	// Parse all entries
+	var entries []AuditEntry
+	for _, line := range lines {
+		if len(line) == 0 {
+			continue
+		}
+		entries = append(entries, ParseEntry(line))
+	}
+
+	// Return last n entries
+	if len(entries) > n {
+		entries = entries[len(entries)-n:]
+	}
+
+	return entries, nil
+}
+
 func dirFromPath(path string) string {
 	for i := len(path) - 1; i >= 0; i-- {
 		if path[i] == '/' {

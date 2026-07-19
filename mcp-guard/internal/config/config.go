@@ -17,6 +17,7 @@ type Config struct {
 	Audit         AuditConfig  `mapstructure:"audit"`
 	HITL          *HITLConfig  `mapstructure:"hitl"`
 	Alert         *AlertConfig `mapstructure:"alert,omitempty"`
+	Admin         AdminConfig  `mapstructure:"admin"`
 }
 
 type ProxyConfig struct {
@@ -71,6 +72,13 @@ type AlertConfig struct {
 	OnInjection bool  `mapstructure:"on_injection"`
 }
 
+type AdminConfig struct {
+	Enabled bool   `mapstructure:"enabled"`
+	Listen  string `mapstructure:"listen"`
+	APIKey  string `mapstructure:"api_key"`
+	Origins []string `mapstructure:"origins"`
+}
+
 // Load reads configuration from viper and expands env vars.
 func Load() (*Config, error) {
 	var cfg Config
@@ -106,6 +114,14 @@ func Load() (*Config, error) {
 	}
 	if cfg.HITL.Timeout == "" {
 		cfg.HITL.Timeout = "5m"
+	}
+
+	// Admin defaults
+	if cfg.Admin.Listen == "" {
+		cfg.Admin.Listen = ":9090"
+	}
+	if cfg.Admin.APIKey == "" {
+		cfg.Admin.APIKey = "controlplane-dev-key"
 	}
 
 	return &cfg, nil
