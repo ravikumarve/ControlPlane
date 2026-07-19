@@ -1,6 +1,18 @@
 # ControlPlane AI — Project Context
 
+> **Note:** MCP Guard has been split into its own standalone project.
+> See `/media/matrix/DATA/opencode_projects/mcp-guard/` and
+> `https://github.com/ravikumarve/mcp-guard`.
+> All Go code, TUI, tests, and agent work now lives there.
+>
+> This repo now holds the original validation docs and project ideation.
+
 ## 💾 Session Memory Ledger
+
+### [2026-07-19 17:30] — Split MCP Guard into Standalone Project
+- **State**: Success — mcp-guard moved to its own directory + git repo
+- **Actions**: Migrated full mcp-guard Go project out of ControlPlane AI into `/media/matrix/DATA/opencode_projects/mcp-guard/`, initialized fresh git repo with 41 files, 6,332 lines, cleaned ControlPlane AI repo
+- **Next Turn Directive**: Publish mcp-guard to its own GitHub repo, or continue with ControlPlane AI ideation
 
 ### [2026-07-17] — MCP Security Gateway Idea Validation
 - **State**: Success — Full validation report delivered

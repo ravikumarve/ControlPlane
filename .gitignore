@@ -19,3 +19,6 @@ Thumbs.db
 *.test
 *.out
 mcp-guard/vendor/
+
+# mcp-guard is now a separate project (see https://github.com/ravikumarve/mcp-guard)
+mcp-guard/
