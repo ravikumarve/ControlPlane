@@ -1,4 +1,4 @@
-# MCP Guard — Architecture Document
+# ControlPlane AI — MCP Security Gateway: Architecture Document
 **Version**: 1.0 | **Date**: 2026-07-17
 
 ## 1. High-Level Architecture

@@ -1,4 +1,4 @@
-# MCP Guard — Product Requirements Document (MVP)
+# ControlPlane AI — MCP Security Gateway: Product Requirements Document (MVP)
 **Version**: 1.0 | **Date**: 2026-07-17 | **Status**: Draft
 
 ## 1. Problem Statement
