@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ControlPlane | Security for the AI Agent Ecosystem</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-void: #050505;
+            --bg-surface: #0a0a0c;
+            --bg-panel: #121214;
+
+            --border-faint: #1f1f22;
+            --border-solid: #27272a;
+
+            --safety-orange: #f97316;
+            --safety-dim: rgba(249, 115, 22, 0.1);
+            --secure-cyan: #06b6d4;
+            --secure-dim: rgba(6, 182, 212, 0.1);
+            --audit-gray: #a1a1aa;
+
+            --text-main: #ffffff;
+            --text-muted: #a1a1aa;
+            --text-faint: #52525b;
+
+            --font-mono: 'JetBrains Mono', monospace;
+            --font-sans: 'Inter', sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; scroll-behavior: smooth; }
+
+        body {
+            background-color: var(--bg-void);
+            color: var(--text-main);
+            font-family: var(--font-sans);
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        #threat-grid-canvas {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: 0; pointer-events: none; opacity: 0.6;
+        }
+
+        .ambient-glow {
+            position: absolute; top: -20vh; right: -10vw;
+            width: 70vw; height: 70vh;
+            background: radial-gradient(ellipse at center, rgba(6, 182, 212, 0.05) 0%, transparent 60%);
+            z-index: 0; pointer-events: none; filter: blur(80px);
+        }
+
+        .container { max-width: 1280px; margin: 0 auto; padding: 0 2rem; position: relative; z-index: 10; }
+        section { padding: 8rem 0; border-top: 1px solid var(--border-solid); }
+        .no-border { border-top: none; }
+
+        h1, h2, h3, h4 { font-family: var(--font-sans); font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; }
+        .mono { font-family: var(--font-mono); }
+
+        nav {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 1.5rem 0; margin-top: 1rem; border-bottom: 1px solid var(--border-solid);
+            position: relative; z-index: 100;
+        }
+
+        .logo {
+            font-family: var(--font-mono); font-size: 1.1rem; font-weight: 800; color: var(--text-main);
+            text-decoration: none; display: flex; align-items: center; gap: 12px; letter-spacing: -0.5px;
+        }
+        .logo-block {
+            width: 16px; height: 16px; background: var(--secure-cyan);
+            display: flex; justify-content: center; align-items: center;
+            box-shadow: 0 0 15px var(--secure-dim);
+        }
+        .logo-block::after { content: ''; width: 6px; height: 6px; background: var(--bg-void); }
+
+        .nav-links { display: flex; gap: 3rem; }
+        .nav-links a { color: var(--text-muted); text-decoration: none; font-size: 0.85rem; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 1px; transition: color 0.2s; }
+        .nav-links a:hover { color: var(--secure-cyan); }
+
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center;
+            padding: 0.75rem 1.5rem; font-family: var(--font-mono); font-size: 0.8rem;
+            font-weight: 700; text-decoration: none; text-transform: uppercase; letter-spacing: 1px;
+            transition: all 0.2s ease; border-radius: 2px;
+        }
+        .btn-primary {
+            background: var(--text-main); color: var(--bg-void);
+            border: 1px solid var(--text-main);
+        }
+        .btn-primary:hover { background: var(--secure-cyan); border-color: var(--secure-cyan); color: var(--bg-void); box-shadow: 0 0 20px var(--secure-dim); }
+
+        .btn-outline { background: var(--bg-surface); color: var(--text-main); border: 1px solid var(--border-solid); }
+        .btn-outline:hover { border-color: var(--text-main); background: var(--bg-panel); }
+
+        .hero { min-height: 85vh; display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: center; padding-top: 0; border: none; }
+
+        .hero-badge {
+            display: inline-flex; align-items: center; gap: 10px;
+            padding: 0.4rem 1rem; background: var(--bg-surface);
+            border: 1px solid var(--border-solid); color: var(--text-muted);
+            font-size: 0.75rem; font-family: var(--font-mono); margin-bottom: 2rem;
+            text-transform: uppercase; letter-spacing: 1px;
+        }
+        .hero-badge span { color: var(--secure-cyan); }
+
+        .hero h1 { font-size: clamp(3rem, 5vw, 4.5rem); margin-bottom: 1.5rem; max-width: 600px; }
+        .hero .subhead { font-size: 1rem; color: var(--audit-gray); font-family: var(--font-mono); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 2px; }
+        .hero p { font-size: 1.15rem; color: var(--text-muted); max-width: 500px; line-height: 1.7; margin-bottom: 3rem; font-weight: 400; }
+
+        .terminal-mockup {
+            width: 100%; background: var(--bg-void); border: 1px solid var(--border-solid);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.8); display: flex; flex-direction: column;
+        }
+        .term-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0.75rem 1.5rem; border-bottom: 1px solid var(--border-solid);
+            background: var(--bg-surface); font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted);
+        }
+        .term-header span:last-child { color: var(--secure-cyan); }
+        .term-body { padding: 2rem 1.5rem; font-family: var(--font-mono); font-size: 0.85rem; line-height: 1.8; color: var(--text-main); overflow-x: auto; }
+
+        .t-sys { color: var(--text-faint); }
+        .t-ok { color: var(--secure-cyan); }
+        .t-warn { color: var(--safety-orange); font-weight: 700;}
+        .t-dim { color: var(--text-muted); }
+
+        .section-header { margin-bottom: 5rem; }
+        .section-header h2 { font-size: 3rem; margin-bottom: 1.5rem; }
+        .section-header p { font-size: 1.15rem; color: var(--text-muted); max-width: 650px; line-height: 1.7; font-weight: 400;}
+
+        .bento-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 1px; background: var(--border-solid); border: 1px solid var(--border-solid); }
+
+        .bento-card {
+            background: var(--bg-surface); padding: 4rem; position: relative;
+            transition: background 0.3s ease; display: flex; flex-direction: column;
+        }
+        .bento-card:hover { background: var(--bg-panel); }
+
+        .col-8 { grid-column: span 8; }
+        .col-4 { grid-column: span 4; }
+        .col-6 { grid-column: span 6; }
+        .col-12 { grid-column: span 12; }
+
+        .bc-tag { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); margin-bottom: 2rem; display: flex; align-items: center; gap: 10px; text-transform: uppercase; letter-spacing: 1px;}
+        .bc-tag::before { content: '['; color: var(--secure-cyan); }
+        .bc-tag::after { content: ']'; color: var(--secure-cyan); }
+        .bc-tag.alert::before, .bc-tag.alert::after { color: var(--safety-orange); }
+
+        .bento-card h3 { font-size: 2rem; margin-bottom: 1rem; color: var(--text-main); }
+        .bento-card p { font-size: 1.05rem; color: var(--text-muted); line-height: 1.8; font-weight: 400; flex: 1;}
+
+        .roadmap-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--border-solid); border: 1px solid var(--border-solid); margin-top: 4rem;}
+        .rm-card { background: var(--bg-surface); padding: 3rem; display: flex; flex-direction: column; }
+        .rm-card.active { background: var(--bg-panel); box-shadow: inset 0 2px 0 var(--secure-cyan); }
+
+        .rm-quarter { font-family: var(--font-mono); font-size: 0.85rem; color: var(--secure-cyan); margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 1px;}
+        .rm-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem; color: var(--text-main); }
+        .rm-desc { font-size: 0.95rem; color: var(--text-muted); line-height: 1.6; }
+        .rm-status { margin-top: auto; padding-top: 2rem; font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-faint); text-transform: uppercase; display: flex; align-items: center; gap: 8px;}
+        .rm-status.live::before { content: ''; width: 6px; height: 6px; background: var(--secure-cyan); border-radius: 50%; }
+
+        .stack-section { display: grid; grid-template-columns: 1fr 1fr; gap: 6rem; align-items: center; }
+
+        .status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border-solid); border: 1px solid var(--border-solid); margin-top: 3rem;}
+        .status-card { background: var(--bg-surface); padding: 2.5rem; display: flex; flex-direction: column;}
+        .sc-val { font-family: var(--font-mono); font-size: 2.5rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem; line-height: 1; display: flex; align-items: center; gap: 10px;}
+        .sc-lbl { font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 1px;}
+
+        .stack-list { list-style: none; display: flex; flex-direction: column; gap: 0; border-top: 1px solid var(--border-solid);}
+        .stack-list li { display: flex; justify-content: space-between; font-size: 0.95rem; color: var(--text-muted); align-items: center; border-bottom: 1px solid var(--border-solid); padding: 1.5rem 0;}
+        .stack-list li span:last-child { color: var(--text-main); font-family: var(--font-mono); font-size: 0.75rem; background: var(--bg-panel); padding: 4px 10px; border: 1px solid var(--border-faint);}
+
+        .cta-band { background: var(--bg-surface); border: 1px solid var(--border-solid); padding: 6rem 4rem; text-align: center; margin: 4rem 0; background-image: radial-gradient(circle at 50% 0%, rgba(6, 182, 212, 0.05) 0%, transparent 70%);}
+        .cta-band h2 { font-size: 3rem; margin-bottom: 1.5rem; }
+        .cta-band p { color: var(--text-muted); font-size: 1.15rem; max-width: 600px; margin: 0 auto 3rem; line-height: 1.8;}
+
+        footer { padding: 5rem 0 3rem; display: flex; justify-content: space-between; align-items: flex-start; }
+        .f-brand p { color: var(--text-muted); font-size: 0.9rem; margin-top: 1.5rem; max-width: 320px; line-height: 1.8; }
+
+        .f-links { display: flex; gap: 5rem; }
+        .f-col h5 { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-main); margin-bottom: 1.5rem; text-transform: uppercase; letter-spacing: 2px;}
+        .f-col ul { list-style: none; display: flex; flex-direction: column; gap: 1rem; }
+        .f-col a { color: var(--text-muted); text-decoration: none; font-size: 0.95rem; transition: color 0.2s; }
+        .f-col a:hover { color: var(--secure-cyan); }
+
+        .f-bottom { margin-top: 6rem; padding-top: 2rem; border-top: 1px solid var(--border-solid); display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-faint); text-transform: uppercase; letter-spacing: 1px;}
+
+        @media (max-width: 1024px) {
+            .hero, .stack-section { grid-template-columns: 1fr; gap: 4rem; }
+            .col-8, .col-4, .col-6 { grid-column: span 12; }
+            .roadmap-grid { grid-template-columns: 1fr; }
+            footer { flex-direction: column; gap: 4rem; }
+        }
+
+        @media (max-width: 768px) {
+            nav { flex-direction: column; gap: 1.5rem; padding: 2rem 0;}
+            .nav-links { display: none; }
+            .hero h1 { font-size: 3rem; }
+            .bento-card, .cta-band, .rm-card { padding: 2.5rem 1.5rem; }
+            .f-links { flex-direction: column; gap: 2rem; }
+            .f-bottom { flex-direction: column; gap: 1rem; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="threat-grid-canvas"></canvas>
+    <div class="ambient-glow"></div>
+
+    <div class="container">
+        <nav>
+            <a href="#" class="logo">
+                <div class="logo-block"></div>
+                ControlPlane
+            </a>
+            <div class="nav-links">
+                <a href="#gateway">mcp-guard</a>
+                <a href="#infrastructure">Stack</a>
+                <a href="#roadmap">Roadmap</a>
+            </div>
+            <a href="https://github.com/ravikumarve/ControlPlane" class="btn btn-outline">GitHub</a>
+        </nav>
+
+        <section class="hero no-border">
+            <div>
+                <div class="hero-badge">
+                    Product: <span>mcp-guard v0.1.0</span>
+                </div>
+                <p class="subhead">ControlPlane</p>
+                <h1>Security for the<br>Agent Ecosystem.</h1>
+                <p>We build security infrastructure for organizations deploying autonomous AI agents. Our MCP Security Gateway sits between orchestration engines and their tools — enforcing policy, blocking injection, and auditing every call.</p>
+                <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                    <a href="#gateway" class="btn btn-primary">Explore mcp-guard</a>
+                    <a href="docs/ARCHITECTURE.md" class="btn btn-outline">Read the Spec</a>
+                </div>
+            </div>
+
+            <div class="terminal-mockup">
+                <div class="term-header">
+                    <span>mcp-guard :: controlplane</span>
+                    <span>ACTIVE</span>
+                </div>
+                <div class="term-body">
+                    <span class="t-sys">[08:42:11]</span> <span class="t-ok">INFO</span> Starting proxy on :8080<br>
+                    <span class="t-sys">[08:42:12]</span> <span class="t-ok">INFO</span> Loaded 12 policies (YAML).<br>
+                    <span class="t-sys">[08:42:15]</span> <span class="t-dim">REQ</span>  Agent_01 → Tool: <code>read_repo</code><br>
+                    <span class="t-sys">[08:42:15]</span> <span class="t-ok">ALLOW</span> Policy match (3ms).<br><br>
+
+                    <span class="t-sys">[08:43:02]</span> <span class="t-dim">REQ</span>  Agent_04 → Tool: <code>drop_table</code><br>
+                    <span class="t-sys">[08:43:02]</span> <span class="t-warn">BLOCK</span> Unauthorized tool access.<br>
+                    <span class="t-sys">[08:43:02]</span> <span class="t-warn">TRIP</span> Circuit breaker activated.<br>
+                </div>
+            </div>
+        </section>
+
+        <section id="gateway">
+            <div class="section-header">
+                <p class="mono" style="color: var(--secure-cyan); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 2px; font-size: 0.85rem;">By ControlPlane</p>
+                <h2>The MCP Security<br>Gateway.</h2>
+                <p>mcp-guard is a zero-trust sidecar for Model Context Protocol (MCP) agents. It prevents injection attacks from becoming database disasters.</p>
+            </div>
+
+            <div class="bento-grid">
+                <div class="bento-card col-8">
+                    <span class="bc-tag">Architecture</span>
+                    <h3>Single Binary Sidecar</h3>
+                    <p>Written in Go. No Kubernetes required. No heavy SaaS dependencies. Deploy the 8.5MB static binary alongside your agent orchestrator, point your tools to it, and instantly secure the perimeter.</p>
+                </div>
+
+                <div class="bento-card col-4">
+                    <span class="bc-tag alert">Threat Vector</span>
+                    <h3>Injection Defense</h3>
+                    <p>Malicious prompts can hijack agent reasoning. We validate parameters against strict patterns before the tool is ever invoked — 10 detection categories including homoglyphs and depth bombs.</p>
+                </div>
+
+                <div class="bento-card col-6">
+                    <span class="bc-tag">Policy Engine</span>
+                    <h3>YAML-Based RBAC</h3>
+                    <p>Define granular access controls with simple YAML. Allow, block, or route to human approval — at the tool level and parameter level. Glob matching on identities, tools, and parameter values.</p>
+                </div>
+
+                <div class="bento-card col-6">
+                    <span class="bc-tag">Compliance</span>
+                    <h3>Human-In-The-Loop</h3>
+                    <p>For destructive actions (financial transfers, database drops), configure policies that pause execution and send an approval request via Slack, Discord, or custom webhook.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="infrastructure" class="stack-section">
+            <div>
+                <h2>Air-Gapped<br>Resilience.</h2>
+                <p style="color: var(--text-muted); font-size: 1.15rem; line-height: 1.8; margin-bottom: 2rem; font-weight: 400;">ControlPlane is engineered for defense, healthcare, and enterprise environments. The product runs locally. Your secrets never leave the wire.</p>
+
+                <div class="status-grid">
+                    <div class="status-card">
+                        <div class="sc-val"><span style="color: var(--secure-cyan);">[</span> <4ms <span style="color: var(--secure-cyan);">]</span></div>
+                        <div class="sc-lbl">Added Latency</div>
+                    </div>
+                    <div class="status-card">
+                        <div class="sc-val"><span style="color: var(--secure-cyan);">[</span> 8.5MB <span style="color: var(--secure-cyan);">]</span></div>
+                        <div class="sc-lbl">Binary Size</div>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <ul class="stack-list">
+                    <li>Company <span>ControlPlane</span></li>
+                    <li>Security Gateway <span>Go 1.24 (mcp-guard)</span></li>
+                    <li>Policy Engine <span>YAML-based RBAC</span></li>
+                    <li>Protocol <span>MCP 2026-07-28</span></li>
+                    <li>Audit Trail <span>HMAC-chained JSONL</span></li>
+                    <li>Landing Page <span>Next.js 14 + Tailwind</span></li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="roadmap">
+            <div class="section-header">
+                <h2>Product Roadmap.</h2>
+                <p>Executing a phased rollout to secure the rapidly expanding autonomous AI ecosystem.</p>
+            </div>
+
+            <div class="roadmap-grid">
+                <div class="rm-card active">
+                    <div class="rm-quarter">Q3 2026</div>
+                    <h3 class="rm-title">mcp-guard V1</h3>
+                    <p class="rm-desc">Launch of the core MCP Security Gateway. RBAC, injection detection, rate limiting, circuit breaker, and tamper-evident audit trail.</p>
+                    <div class="rm-status live">MVP Released</div>
+                </div>
+
+                <div class="rm-card">
+                    <div class="rm-quarter">Q4 2026</div>
+                    <h3 class="rm-title">Policy Console</h3>
+                    <p class="rm-desc">Web-based management console to author, version, and monitor policies across fleets of mcp-guard instances.</p>
+                    <div class="rm-status">In Design</div>
+                </div>
+
+                <div class="rm-card">
+                    <div class="rm-quarter">Q1 2027</div>
+                    <h3 class="rm-title">SIEM Integration</h3>
+                    <p class="rm-desc">Forward tamper-evident audit trails to Splunk, Datadog, or ELK via standard protocols.</p>
+                    <div class="rm-status">Researching</div>
+                </div>
+            </div>
+        </section>
+
+        <section style="padding: 0; border: none;">
+            <div class="cta-band">
+                <h2>Fortify your agent layer.</h2>
+                <p>Stop trusting autonomous agents with bare API keys. Deploy ControlPlane's mcp-guard and enforce zero-trust policies today.</p>
+                <div style="display: flex; justify-content: center; margin-top: 2.5rem; gap: 1rem;">
+                    <a href="https://github.com/ravikumarve/ControlPlane" class="btn btn-primary">View on GitHub</a>
+                    <a href="docs/PRD.md" class="btn btn-outline">Read PRD</a>
+                </div>
+            </div>
+        </section>
+
+        <footer>
+            <div class="f-brand">
+                <a href="#" class="logo">
+                    <div class="logo-block"></div>
+                    CONTROLPLANE
+                </a>
+                <p>Zero-trust security infrastructure for the AI agent ecosystem. Enforcing policy, preventing injection, and securing the bridge to your servers.</p>
+            </div>
+
+            <div class="f-links">
+                <div class="f-col">
+                    <h5>Company</h5>
+                    <ul>
+                        <li><a href="docs/COMPANY.md">About</a></li>
+                        <li><a href="docs/ARCHITECTURE.md">Architecture</a></li>
+                        <li><a href="docs/SECURITY.md">Security</a></li>
+                    </ul>
+                </div>
+                <div class="f-col">
+                    <h5>Product</h5>
+                    <ul>
+                        <li><a href="#gateway">mcp-guard</a></li>
+                        <li><a href="docs/FRONTEND-PLAN.md">Frontend Plan</a></li>
+                        <li><a href="docs/CONTRIBUTING.md">Contributing</a></li>
+                    </ul>
+                </div>
+            </div>
+        </footer>
+
+        <div class="f-bottom">
+            <div>© 2026 ControlPlane. MIT licensed.</div>
+            <div>STATUS: <span style="color: var(--secure-cyan);">ALL SYSTEMS NOMINAL</span></div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('threat-grid-canvas');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+
+        const nodes = [];
+        const packets = [];
+        const numNodes = window.innerWidth > 768 ? 60 : 30;
+
+        function init() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+
+            nodes.length = 0;
+            packets.length = 0;
+
+            for(let i = 0; i < numNodes; i++) {
+                nodes.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    type: Math.random() > 0.7 ? 'tool' : 'agent',
+                    status: 'nominal',
+                    alertTimer: 0
+                });
+            }
+
+            nodes.forEach(n => {
+                n.connections = [];
+                nodes.forEach(n2 => {
+                    if (n !== n2 && Math.hypot(n.x - n2.x, n.y - n2.y) < 250) {
+                        if ((n.type === 'agent' && n2.type === 'tool') || (n.type === 'tool' && n2.type === 'agent')) {
+                            n.connections.push(n2);
+                        }
+                    }
+                });
+            });
+        }
+
+        function spawnPacket() {
+            let agents = nodes.filter(n => n.type === 'agent' && n.connections.length > 0);
+            if (agents.length === 0) return;
+
+            let startNode = agents[Math.floor(Math.random() * agents.length)];
+            let endNode = startNode.connections[Math.floor(Math.random() * startNode.connections.length)];
+
+            let isMalicious = Math.random() > 0.95;
+
+            packets.push({
+                x: startNode.x,
+                y: startNode.y,
+                target: endNode,
+                progress: 0,
+                speed: 0.01 + Math.random() * 0.01,
+                isMalicious: isMalicious
+            });
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            ctx.clearRect(0, 0, width, height);
+
+            if (Math.random() > 0.8) spawnPacket();
+
+            ctx.lineWidth = 1;
+            nodes.forEach(n => {
+                n.connections.forEach(n2 => {
+                    ctx.beginPath();
+                    ctx.moveTo(n.x, n.y);
+                    ctx.lineTo(n2.x, n2.y);
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+                    ctx.stroke();
+                });
+            });
+
+            nodes.forEach(n => {
+                ctx.beginPath();
+
+                if (n.alertTimer > 0) {
+                    n.alertTimer--;
+                    if (n.alertTimer <= 0) n.status = 'nominal';
+                }
+
+                if (n.status === 'alert') {
+                    ctx.arc(n.x, n.y, 6, 0, Math.PI * 2);
+                    ctx.fillStyle = '#f97316';
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = '#f97316';
+                } else if (n.type === 'tool') {
+                    ctx.rect(n.x - 3, n.y - 3, 6, 6);
+                    ctx.fillStyle = '#06b6d4';
+                    ctx.shadowBlur = 5;
+                    ctx.shadowColor = '#06b6d4';
+                } else {
+                    ctx.arc(n.x, n.y, 2, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                    ctx.shadowBlur = 0;
+                }
+
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            });
+
+            for (let i = packets.length - 1; i >= 0; i--) {
+                let p = packets[i];
+                p.progress += p.speed;
+
+                if (p.progress >= 1) {
+                    if (p.isMalicious) {
+                        p.target.status = 'alert';
+                        p.target.alertTimer = 60;
+                    }
+                    packets.splice(i, 1);
+                    continue;
+                }
+
+                let currentX = p.x + (p.target.x - p.x) * p.progress;
+                let currentY = p.y + (p.target.y - p.y) * p.progress;
+
+                ctx.beginPath();
+                ctx.arc(currentX, currentY, 2, 0, Math.PI * 2);
+
+                if (p.isMalicious) {
+                    ctx.fillStyle = '#f97316';
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = '#f97316';
+                } else {
+                    ctx.fillStyle = '#06b6d4';
+                    ctx.shadowBlur = 5;
+                    ctx.shadowColor = '#06b6d4';
+                }
+
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        window.addEventListener('resize', init);
+        init();
+        animate();
+    </script>
+</body>
+</html>

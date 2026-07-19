@@ -1,0 +1,44 @@
+# mcp-guard.yaml — Generic Default Template
+version: "1"
+
+proxy:
+  mode: stdio
+  listen: ":8443"
+  upstream: ""
+
+policies:
+  - name: allow-read-only
+    action: allow
+    match:
+      identity: "*"
+      tools: ["read_*", "search_*", "get_*", "list_*"]
+
+  - name: block-dangerous
+    action: block
+    alert: true
+    match:
+      identity: "*"
+      tools: ["delete_*", "drop_*", "exec_*", "rm_*"]
+
+  - name: payment-approval
+    action: hitl
+    match:
+      identity: "*"
+      tools: ["execute_payout", "refund", "transfer"]
+
+ratelimit:
+  default: 60/min
+
+schema_pinning:
+  enabled: true
+  mode: block
+  store: ".mcp-guard/pins.json"
+
+audit:
+  path: /var/log/mcp-guard/audit.jsonl
+  hmac_key: "${MCP_GUARD_HMAC_KEY}"
+  rotation: 100MB
+
+hitl:
+  webhook_url: "${SLACK_WEBHOOK_URL}"
+  timeout: 5m

@@ -1,50 +1,99 @@
-# ControlPlane AI
+# ControlPlane
 
 **Security infrastructure for the AI agent ecosystem.**
 
-ControlPlane AI builds zero-trust security tools for organizations deploying autonomous AI agents. Our products sit between agent orchestration engines and the tools/servers they call — enforcing policy, preventing injection attacks, and providing tamper-evident audit trails.
+ControlPlane builds zero-trust security tools for organizations deploying autonomous AI agents. Our products sit between agent orchestration engines and the tools/servers they call — enforcing policy, preventing injection attacks, and providing tamper-evident audit trails.
 
-## Why ControlPlane AI
-
-AI agents now have direct access to production databases, APIs, and operational tools through protocols like MCP (Model Context Protocol). But these protocols have no built-in security. Existing API gateways only validate static HTTP routes and cannot inspect dynamic agent intent.
-
-ControlPlane AI solves this with **agent-aware security layers** that understand tool semantics, not just transport protocols.
+---
 
 ## Products
 
-### MCP Security & Gateway Proxy
-A zero-trust sidecar for MCP agents — RBAC, injection detection, circuit breaker, and HITL approval. Currently in MVP.
+### mcp-guard — MCP Security Gateway
 
-> **Repository**: [ravikumarve/mcp-guard](https://github.com/ravikumarve/mcp-guard)
+A zero-trust sidecar for MCP agents — RBAC, injection detection, rate limiting, circuit breaker, HITL approval, and HMAC-chained audit. Single Go binary, no Kubernetes, no SaaS.
 
-**Capabilities:**
-- **RBAC for Agents** — restrict agent identities to granular tool scopes
-- **Pre-Execution Circuit Breaker** — evaluate tool parameters before execution
-- **Human-in-the-Loop (HITL)** — pause and approve high-risk operations via webhook
-- **Immutable Audit Trail** — HMAC-chained JSONL for compliance
+```bash
+mcp-guard serve                    # Start proxy daemon
+mcp-guard top                      # Live TUI dashboard
+mcp-guard logs --tail              # View audit log
+mcp-guard init --template github   # Generate config from template
+```
 
 ### Roadmap
+
 | Product | Status | Target |
 |---------|--------|--------|
-| MCP Security Gateway (mcp-guard) | 🟢 MVP | V1 Release Q3 2026 |
-| Policy Management UI | 🟡 Design | Q4 2026 |
+| mcp-guard V1 | ✅ MVP | Q3 2026 |
+| Policy Management Console | 🟡 Design | Q4 2026 |
 | SIEM Integration | 🔵 Research | Q1 2027 |
+
+---
+
+## Repository Structure
+
+```
+├── mcp-guard/           ← Go backend (the actual product)
+│   ├── cmd/             ← CLI: serve, top, logs, policy, init, pin, approve
+│   ├── internal/        ← Packages: proxy, policy, inject, audit, hitl, ratelimit, ...
+│   └── main.go
+├── app/                 ← Next.js landing page (controlplane.ai)
+├── components/          ← React components (Button, Card, Hero, Features, ...)
+├── docs/                ← Company foundation documents
+├── lib/                 ← Frontend utilities
+├── tailwind.config.ts   ← Brand colors and design tokens
+└── controlplane_ai_landing_page.html  ← Design mockup
+```
+
+### Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Security Gateway | Go 1.24 (mcp-guard) |
+| Landing Page | Next.js 14 + Tailwind CSS (static export) |
+| Policy Engine | YAML-based RBAC |
+| Audit | HMAC-chained JSONL |
+| TUI | Bubble Tea |
+
+---
+
+## Development
+
+```bash
+# Build the Go gateway
+cd mcp-guard && go build -ldflags="-s -w" -o mcp-guard .
+
+# Run tests (68+ tests across 8 packages)
+cd mcp-guard && go test -count=1 -timeout 30s ./...
+
+# Landing page dev server (from root)
+npm run dev
+
+# Landing page build
+npm run build
+```
+
+No database required. No environment variables needed for development.
+
+---
 
 ## Documentation
 
 | Document | Purpose |
 |----------|---------|
-| [COMPANY.md](./docs/COMPANY.md) | Mission, vision, values, portfolio |
-| [PRD.md](./docs/PRD.md) | Product requirements for MCP Security Gateway |
-| [ARCHITECTURE.md](./docs/ARCHITECTURE.md) | System architecture and data flow |
-| [PRODUCT-ROADMAP.md](./docs/PRODUCT-ROADMAP.md) | Phased delivery milestones |
-| [VALIDATION_REPORT.md](./docs/VALIDATION_REPORT.md) | Market research and competitive analysis |
-| [GOVERNANCE.md](./docs/GOVERNANCE.md) | Decision-making and maintainer roles |
+| [COMPANY.md](./docs/COMPANY.md) | Mission, vision, values |
+| [PRD.md](./docs/PRD.md) | Product requirements |
+| [ARCHITECTURE.md](./docs/ARCHITECTURE.md) | System architecture |
+| [FRONTEND-PLAN.md](./docs/FRONTEND-PLAN.md) | Frontend architecture |
+| [PRODUCT-ROADMAP.md](./docs/PRODUCT-ROADMAP.md) | Milestones |
+| [VALIDATION_REPORT.md](./docs/VALIDATION_REPORT.md) | Market research |
+| [E2E-TESTING-PIPELINE.md](./docs/E2E-TESTING-PIPELINE.md) | Test strategy |
+| [GOVERNANCE.md](./docs/GOVERNANCE.md) | Decision-making, roles |
 | [CONTRIBUTING.md](./docs/CONTRIBUTING.md) | How to contribute |
 | [CODE_OF_CONDUCT.md](./docs/CODE_OF_CONDUCT.md) | Community standards |
 | [SECURITY.md](./docs/SECURITY.md) | Vulnerability disclosure |
-| [BRAND.md](./docs/BRAND.md) | Logo, colors, voice, messaging |
-| [E2E-TESTING-PIPELINE.md](./docs/E2E-TESTING-PIPELINE.md) | End-to-end testing strategy, CI pipeline, and quality gates |
+| [BRAND.md](./docs/BRAND.md) | Logo, colors, voice |
+
+---
 
 ## License
 

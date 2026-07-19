@@ -1,0 +1,34 @@
+# mcp-guard.yaml — Slack MCP Server Template
+version: "1"
+
+proxy:
+  mode: tcp
+  listen: ":8443"
+  upstream: "localhost:3000"
+
+policies:
+  - name: allow-reads
+    action: allow
+    match:
+      identity: "*"
+      tools: ["read_*", "search_*", "list_*", "get_*"]
+
+  - name: block-admin-actions
+    action: block
+    alert: true
+    match:
+      identity: "*"
+      tools: ["delete_*", "kick_*", "ban_*", "invite_*"]
+
+ratelimit:
+  default: 20/min
+
+audit:
+  path: /var/log/mcp-guard/audit.jsonl
+  hmac_key: "${MCP_GUARD_HMAC_KEY}"
+  rotation: 100MB
+
+schema_pinning:
+  enabled: true
+  mode: warn
+  store: ".mcp-guard/pins.json"

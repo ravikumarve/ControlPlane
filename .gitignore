@@ -1,9 +1,21 @@
-# Go binary
+# Next.js
+.next/
+out/
+
+# Go
 mcp-guard/mcp-guard
 mcp-guard/mcp-guard.exe
+mcp-guard/*.test
+mcp-guard/*.out
+mcp-guard/vendor/
 
-# Temp config files
-mcp-guard.yaml
+# Dependencies
+node_modules/
+
+# Environment
+.env
+.env.local
+.env*.local
 
 # IDE
 .vscode/
@@ -15,10 +27,6 @@ mcp-guard.yaml
 .DS_Store
 Thumbs.db
 
-# Go
-*.test
-*.out
-mcp-guard/vendor/
-
-# mcp-guard is now a separate project (see https://github.com/ravikumarve/mcp-guard)
-mcp-guard/
+# Build artifacts
+*.tsbuildinfo
+next-env.d.ts
