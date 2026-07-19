@@ -96,3 +96,27 @@
 - **Build**: 8.5MB binary, `go vet` clean
 - **Git**: `5d3ef5b` pushed to main
 - **Next Turn Directive**: Tag v0.1.0-alpha release, or build deploy/docs/quickstart guide
+
+### [2026-07-18 00:30] — Full Standalone TUI Dashboard Redesign
+- **State**: Success — 7 suites pass, pushed to GitHub
+- **Core Redesign**: Complete rewrite of `internal/tui/` from basic stats to full analytics dashboard
+- **New Layout** (lipgloss-powered, responsive):
+  - Wide (>80): side-by-side stats + tool breakdown + identity breakdown
+  - Narrow (<80): stacked vertical layout
+- **Dashboard Panels**:
+  - **Header**: branded bar with version, mode, live/stale/disconnected indicator, uptime
+  - **Traffic Summary**: total/allowed/blocked/HITL/rate limited/injection blocks with mini bars
+  - **Top Tools**: top 8 tools by call count with bar charts
+  - **Top Identities**: top 7 identities by call count with block counts
+  - **Activity Sparkline**: 5s-interval rolling bar chart (24 buckets = 2min window)
+  - **Live Feed**: scrollable color-coded audit log (↑↓ keys)
+- **Control Improvements**:
+  - `p` — pause/resume live feed
+  - `↑` `↓` — scroll through audit history
+  - `q` / `Ctrl+C` — quit
+  - `--audit-path` flag for custom log location
+- **Stale Detection**: marks connection as stale after 15s without updates; shows ○ DISCONNECTED when file doesn't exist
+- **Architecture**: style wrappers use ANSI strings in render hot path (stats/tables/timeline) and lipgloss for panels/layout — avoids lipgloss allocation overhead in rendering loops
+- **Binary**: 8.5MB, `go vet` clean
+- **Git**: `9e2c967` pushed to main
+- **Docs**: Created `mcp-guard/README.md` (full project docs) and `mcp-guard/AGENTS.md` (project context)
